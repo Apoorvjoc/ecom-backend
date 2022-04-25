@@ -1,4 +1,4 @@
-const product = require('../models/product');
+const Product = require('../models/product');
 const bigPromise = require('../middleware/bigPromise');
 const cloudinary = require('cloudinary');
 const CustomError = require('../utils/customError');
@@ -11,9 +11,13 @@ exports.addProduct = bigPromise(async(req , res , next)=>{
     if(!req.files){
         return next(new CustomError('please provide product images.',401));
     }
+    // console.log("Before file upload....");
+ 
+   try {
     if(req.files){
+        console.log("inside if");
         for (let index = 0; index < req.files.photos.length; index++) {
-            let result = await cloudinary.v2.uploader.upload(req.files.photos[i].tempFilePath,{
+            let result = await cloudinary.v2.uploader.upload(req.files.photos[index].tempFilePath,{
                     folder:"products"
                  })
                 imgArr.push({
@@ -22,7 +26,10 @@ exports.addProduct = bigPromise(async(req , res , next)=>{
                 })
         }
     }
-
+   } catch (error) {
+       console.log("Error at file upload: "+ errorc);
+   }
+//    console.log("after file upload....");
     req.body.photos = imgArr;
     req.body.user = req.user.id;
 
@@ -30,7 +37,7 @@ exports.addProduct = bigPromise(async(req , res , next)=>{
 
     res.status(200).json({
         success:true,
-        message:"product creared successfully..",
+        message:"product created successfully..",
         product
     })
 
@@ -40,13 +47,14 @@ exports.getAllProduct = bigPromise(async(req,res,next)=>{
     const resultPerPage = 6;//lets say by default we want to display 6 result only.
     const totalProductCount = await Product.countDocuments();
 
-    const products = new WhereClause(Product.find() , req.query).search().filter();
+    const productsObj = new WhereClause(Product.find() , req.query).search().filter();
 
+    let products = await productsObj.base; 
     const filteredProductNumber = products.length;
 
-    products.pager(resultPerPage)
+    productsObj.pager(resultPerPage)
 
-    products = await products.base;
+    products = await productsObj.base.clone();
 
     res.status(200).json({
         success:true,
